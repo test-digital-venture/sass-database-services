@@ -7,11 +7,11 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_USER: orinda
-      POSTGRES_PASSWORD: orinda
-      POSTGRES_DB: orinda
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
-      - ./pgdata:/var/lib/postgresql/data 
+      - ${DATA_DIR}/pgdata:/var/lib/postgresql/data 
   portainer:
     build: ./portainer
     restart: always
