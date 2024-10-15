@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  postgres:
+    build: ./postgresql
+    restart: always
+    container_name: postgres_db
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: orinda
+      POSTGRES_PASSWORD: orinda
+      POSTGRES_DB: orinda
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+
+# volumes:
+#   pgdata:
