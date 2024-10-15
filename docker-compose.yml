@@ -13,5 +13,15 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - ${DATA_DIR}/pgdata:/var/lib/postgresql/data
-# volumes:
-#   pg_data:
+  portainer:
+    image: portainer/portainer-ce
+    container_name: portainer
+    restart: always
+    ports:
+      - 9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+      
+volumes:
+  portainer_data:
