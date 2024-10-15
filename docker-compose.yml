@@ -11,7 +11,15 @@ services:
       POSTGRES_PASSWORD: orinda
       POSTGRES_DB: orinda
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data 
+  portainer:
+    build: ./portainer
+    restart: always
+    container_name: portainer
+    ports:
+      - 9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 # volumes:
 #   pgdata:
