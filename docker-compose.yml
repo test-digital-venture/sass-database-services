@@ -30,7 +30,15 @@ services:
       - 6370:6370
     environment:
       - REDIS_PASSWORD=${DB_PASSWORD}
-    
-      
+  mongo:
+    image: mongo
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ${DATA_DIR}/mongo:/data/db
+
 volumes:
   portainer_data:
