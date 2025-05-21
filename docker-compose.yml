@@ -71,6 +71,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  # TiDb
+  tidb:
+    image: pingcap/tidb
+    container_name: tidb
+    restart: always
+    networks:
+      - shared_network
+    ports:
+      - 4000:4000
+      - 10080:10080
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_USER=${DB_USER}
   adminer:
     image: adminer
     container_name: adminer
