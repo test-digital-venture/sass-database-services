@@ -11,9 +11,9 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER: ${BASE_USER}
       POSTGRES_DB: ${DB_NAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${BASE_PASSWORD}
     volumes:
       - ${DATA_DIR}/pgdata:/var/lib/postgresql/data
   portainer:
@@ -36,7 +36,7 @@ services:
     ports:
       - 6370:6370
     environment:
-      - REDIS_PASSWORD=${DB_PASSWORD}
+      - REDIS_PASSWORD=${BASE_PASSWORD}
   mongo:
     image: mongo
     container_name: mongo
@@ -46,8 +46,8 @@ services:
     ports:
       - 27017:27017
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DB_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${BASE_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${BASE_PASSWORD}
     volumes:
       - ${DATA_DIR}/mongo:/data/db
   # mysql
@@ -60,10 +60,10 @@ services:
     ports:
       - 3306:3306
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${BASE_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${BASE_USER}
+      MYSQL_PASSWORD: ${BASE_PASSWORD}
     volumes:
       - ${DATA_DIR}/mysql:/var/lib/mysql
     healthcheck:
@@ -82,8 +82,8 @@ services:
       - 4000:4000
       - 10080:10080
     # environment:
-    #   - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-    #   - MYSQL_USER=${DB_USER}
+    #   - MYSQL_ROOT_PASSWORD=${BASE_PASSWORD}
+    #   - MYSQL_USER=${BASE_USER}
   adminer:
     image: adminer
     container_name: adminer
@@ -92,9 +92,53 @@ services:
       - shared_network
     ports:
       - 8080:8080
+  minio-s3:
+    image: quay.io/minio/minio
+    container_name: minio-s3
+    restart: always
+    networks:
+      - shared_network
+    ports:
+      - 9090:9000  # API port: host:container
+      - 9091:9001  # Console port: host:container
+    environment:
+      MINIO_ROOT_USER: ${BASE_USER}
+      MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - ${DATA_DIR}/minio:/data
+    
+# Removed separate minio-console since it's now integrated with minio-s3 on port 9001
+  minio-client:
+    image: quay.io/minio/mc
+    container_name: minio-client
+    restart: always
+    networks:
+      - shared_network
+    entrypoint: >
+      sh -c "mc alias set myminio http://minio-s3:9000 ${BASE_USER} ${BASE_PASSWORD} &&
+             mc mb myminio/mybucket &&
+             mc policy set public myminio/mybucket &&
+             tail -f /dev/null"
+    depends_on:
+      - minio-s3
+    environment:
+      MINIO_ROOT_USER: ${BASE_USER}
+      MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    networks:
+      - shared_network
+    ports:
+      - 80:80
+      - 443:443
 
 volumes:
   portainer_data:
+  minio_data:
+    driver: local
 networks:
   shared_network:
     external: true
