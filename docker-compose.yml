@@ -34,9 +34,8 @@ services:
     networks:
       - shared_network
     ports:
-      - 6370:6370
-    environment:
-      - REDIS_PASSWORD=${BASE_PASSWORD}
+      - 6379:6379  # Use 6379 inside container
+    # command: ["redis-server", "--requirepass", "${BASE_PASSWORD}"]
   mongo:
     image: mongo
     container_name: mongo
