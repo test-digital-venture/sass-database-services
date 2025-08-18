@@ -83,8 +83,12 @@ services:
       # Disable security features for development
       discovery.type: single-node
       xpack.security.enabled: false
+      # Memory limits - cap at 4GB
+      ES_JAVA_OPTS: "-Xms2g -Xmx4g"
     volumes:
       - ${DATA_DIR}/elasticsearch:/usr/share/elasticsearch/data
+    # Set memory limits at the container level as well
+    mem_limit: 4g
   # TiDb
   tidb:
     image: pingcap/tidb
