@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   postgres:
     restart: always
@@ -70,6 +68,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  #ElasticSearch
+  elasticsearch:
+    image: elasticsearch:8.0.0
+    container_name: elasticsearch
+    restart: always
+    networks:
+      - shared_network
+    ports:
+      - 9200:9200
+    environment:
+      ELASTICSEARCH_USERNAME: ${BASE_USER}
+      ELASTICSEARCH_PASSWORD: ${BASE_PASSWORD}
+      # Disable security features for development
+      discovery.type: single-node
+      xpack.security.enabled: false
+    volumes:
+      - ${DATA_DIR}/elasticsearch:/usr/share/elasticsearch/data
   # TiDb
   tidb:
     image: pingcap/tidb
@@ -137,6 +152,8 @@ services:
 volumes:
   portainer_data:
   minio_data:
+    driver: local
+  elasticsearch_data:
     driver: local
 networks:
   shared_network:
