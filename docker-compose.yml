@@ -41,7 +41,7 @@ services:
     networks:
       - shared_network
     ports:
-      - 27017:27017
+      - 27018:27017 # Using host port 27018 instead of 27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${BASE_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${BASE_PASSWORD}
@@ -54,7 +54,7 @@ services:
     networks:
       - shared_network
     ports:
-      - 27018:27017  # Using host port 27018 instead of 27017
+      - 27017:27017  
     environment:
       MONGO_INITDB_DATABASE: init  # Optional: initialize a specific database
     command: mongod --noauth  # Disable authentication
