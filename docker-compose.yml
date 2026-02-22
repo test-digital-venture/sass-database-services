@@ -7,7 +7,7 @@ services:
       - shared_network
     # env_file: ./.env
     ports:
-      - 5432:5432
+      - 5434:5432
     environment:
       POSTGRES_USER: ${BASE_USER}
       POSTGRES_DB: ${DB_NAME}
@@ -32,8 +32,10 @@ services:
     networks:
       - shared_network
     ports:
-      - 6379:6379  # Use 6379 inside container
-    # command: ["redis-server", "--requirepass", "${BASE_PASSWORD}"]
+      - 6389:6379  # Use 6379 inside container
+    command: ["redis-server", "--requirepass", "${BASE_PASSWORD}"]
+    volumes:
+      - ${DATA_DIR}/redis:/data
   mongo:
     image: mongo
     container_name: mongo
@@ -68,7 +70,7 @@ services:
     networks:
       - shared_network
     ports:
-      - 3306:3306
+      - 3308:3306
     environment:
       MYSQL_ROOT_PASSWORD: ${BASE_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -76,32 +78,33 @@ services:
       MYSQL_PASSWORD: ${BASE_PASSWORD}
     volumes:
       - ${DATA_DIR}/mysql:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
   #ElasticSearch
-  elasticsearch:
-    image: elasticsearch:8.0.0
-    container_name: elasticsearch
-    restart: always
-    networks:
-      - shared_network
-    ports:
-      - 9200:9200
-    environment:
-      ELASTICSEARCH_USERNAME: ${BASE_USER}
-      ELASTICSEARCH_PASSWORD: ${BASE_PASSWORD}
-      # Disable security features for development
-      discovery.type: single-node
-      xpack.security.enabled: false
-      # Memory limits - cap at 4GB
-      ES_JAVA_OPTS: "-Xms2g -Xmx4g"
-    volumes:
-      - ${DATA_DIR}/elasticsearch:/usr/share/elasticsearch/data
-    # Set memory limits at the container level as well
-    mem_limit: 4g
+  # elasticsearch:
+  #   image: elasticsearch:8.0.0
+  #   container_name: elasticsearch
+  #   restart: always
+  #   networks:
+  #     - shared_network
+  #   ports:
+  #     - 9200:9200
+  #   environment:
+  #     ELASTICSEARCH_USERNAME: ${BASE_USER}
+  #     ELASTICSEARCH_PASSWORD: ${BASE_PASSWORD}
+  #     # Disable security features for development
+  #     discovery.type: single-node
+  #     xpack.security.enabled: false
+  #     # Memory limits - cap at 4GB
+  #     ES_JAVA_OPTS: "-Xms2g -Xmx4g"
+  #   volumes:
+  #     - ${DATA_DIR}/elasticsearch:/usr/share/elasticsearch/data
+  #   # Set memory limits at the container level as well
+  #   mem_limit: 4g
   # TiDb
   tidb:
     image: pingcap/tidb
@@ -123,39 +126,39 @@ services:
       - shared_network
     ports:
       - 8080:8080
-  minio-s3:
-    image: quay.io/minio/minio
-    container_name: minio-s3
-    restart: always
-    networks:
-      - shared_network
-    ports:
-      - 9090:9000  # API port: host:container
-      - 9091:9001  # Console port: host:container
-    environment:
-      MINIO_ROOT_USER: ${BASE_USER}
-      MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
-    command: server /data --console-address ":9001"
-    volumes:
-      - ${DATA_DIR}/minio:/data
+  # minio-s3:
+  #   image: quay.io/minio/minio
+  #   container_name: minio-s3
+  #   restart: always
+  #   networks:
+  #     - shared_network
+  #   ports:
+  #     - 9090:9000  # API port: host:container
+  #     - 9091:9001  # Console port: host:container
+  #   environment:
+  #     MINIO_ROOT_USER: ${BASE_USER}
+  #     MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
+  #   command: server /data --console-address ":9001"
+  #   volumes:
+  #     - ${DATA_DIR}/minio:/data
     
 # Removed separate minio-console since it's now integrated with minio-s3 on port 9001
-  minio-client:
-    image: quay.io/minio/mc
-    container_name: minio-client
-    restart: always
-    networks:
-      - shared_network
-    entrypoint: >
-      sh -c "mc alias set myminio http://minio-s3:9000 ${BASE_USER} ${BASE_PASSWORD} &&
-             mc mb myminio/mybucket &&
-             mc policy set public myminio/mybucket &&
-             tail -f /dev/null"
-    depends_on:
-      - minio-s3
-    environment:
-      MINIO_ROOT_USER: ${BASE_USER}
-      MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
+  # minio-client:
+  #   image: quay.io/minio/mc
+  #   container_name: minio-client
+  #   restart: always
+  #   networks:
+  #     - shared_network
+  #   entrypoint: >
+  #     sh -c "mc alias set myminio http://minio-s3:9000 ${BASE_USER} ${BASE_PASSWORD} &&
+  #            mc mb myminio/mybucket &&
+  #            mc policy set public myminio/mybucket &&
+  #            tail -f /dev/null"
+  #   depends_on:
+  #     - minio-s3
+  #   environment:
+  #     MINIO_ROOT_USER: ${BASE_USER}
+  #     MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -168,10 +171,10 @@ services:
 
 volumes:
   portainer_data:
-  minio_data:
-    driver: local
-  elasticsearch_data:
-    driver: local
+  # minio_data:
+  #   driver: local
+  # elasticsearch_data:
+  #   driver: local
 networks:
   shared_network:
     external: true
