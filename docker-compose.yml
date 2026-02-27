@@ -125,7 +125,7 @@ services:
     networks:
       - shared_network
     ports:
-      - 8080:8080
+      - 8200:8080
   # minio-s3:
   #   image: quay.io/minio/minio
   #   container_name: minio-s3
