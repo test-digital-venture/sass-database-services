@@ -254,6 +254,18 @@ services:
       SCHEMAREGISTRY_URLS: http://redpanda:8081
     depends_on:
       - redpanda
+  coredns:
+    image: coredns/coredns
+    container_name: coredns
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4627:53/udp
+      - 4627:53/tcp
+    volumes:
+      - ./coredns/Corefile:/root/Corefile
+    command: -conf /root/Corefile
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -263,6 +275,8 @@ services:
     ports:
       - 4612:80
       - 4613:443
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
 
 volumes:
   portainer_data:

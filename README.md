@@ -60,7 +60,8 @@ Services are configured with `restart: "no"`, so they only run when explicitly s
 | Redpanda HTTP Proxy | 4624 | HTTP Proxy for Kafka |
 | Redpanda Admin | 4625 | Redpanda admin API |
 | Redpanda Console | 4626 | Redpanda web UI |
-| Nginx HTTP | 4612 | Nginx HTTP |
+| CoreDNS | 4627 | Local DNS for wildcard subdomains |
+| Nginx HTTP | 4612 | Nginx reverse proxy (subdomain routing) |
 | Nginx HTTPS | 4613 | Nginx HTTPS |
 
 ## Web UIs
@@ -75,6 +76,51 @@ Services are configured with `restart: "no"`, so they only run when explicitly s
 - Mailpit: `http://localhost:4620` (SMTP on port `4619`)
 - Meilisearch: `http://localhost:4621` (master key: `<BASE_PASSWORD>`)
 - Redpanda Console: `http://localhost:4626`
+
+## Tenant Subdomain Routing
+
+CoreDNS + Nginx are configured for local multi-tenant subdomain routing.
+
+### How it works
+
+1. **CoreDNS** resolves `*.myapp.local` → `127.0.0.1`
+2. **Nginx** captures the subdomain and forwards it as an `X-Tenant-ID` header to your API
+3. Your API reads `X-Tenant-ID` to identify the tenant
+
+### Setup
+
+Point your machine's DNS to CoreDNS for `.myapp.local` domains:
+
+```sh
+# Start the services
+docker compose up -d coredns nginx
+
+# Test DNS resolution
+dig @127.0.0.1 -p 4627 tenant1.myapp.local
+
+# Configure your system to use CoreDNS for .myapp.local
+# Option 1: systemd-resolved (Ubuntu/Fedora)
+sudo mkdir -p /etc/systemd/resolved.conf.d
+echo -e "[Resolve]\nDNS=127.0.0.1:4627\nDomains=~myapp.local" | sudo tee /etc/systemd/resolved.conf.d/myapp.conf
+sudo systemctl restart systemd-resolved
+
+# Option 2: /etc/hosts (manual, no wildcard support)
+echo "127.0.0.1 tenant1.myapp.local tenant2.myapp.local" | sudo tee -a /etc/hosts
+```
+
+### Usage
+
+```sh
+# Requests to any subdomain will include X-Tenant-ID header
+curl http://tenant1.myapp.local:4612/api/health
+# → X-Tenant-ID: tenant1
+
+curl http://tenant2.myapp.local:4612/api/health
+# → X-Tenant-ID: tenant2
+```
+
+Edit [nginx/default.conf](nginx/default.conf) to change the upstream (default: `host.docker.internal:3000`).
+Edit [coredns/Corefile](coredns/Corefile) to add more domains.
 
 ## Environment Variables
 
