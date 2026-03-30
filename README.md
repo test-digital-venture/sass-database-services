@@ -77,6 +77,271 @@ Services are configured with `restart: "no"`, so they only run when explicitly s
 - Meilisearch: `http://localhost:4621` (master key: `<BASE_PASSWORD>`)
 - Redpanda Console: `http://localhost:4626`
 
+## Service Usage Guide
+
+### PostgreSQL
+
+```sh
+docker compose up -d postgres
+```
+
+Connect with any PostgreSQL client:
+
+```sh
+psql -h localhost -p 4601 -U <BASE_USER> -d <DB_NAME>
+```
+
+Connection string: `postgresql://<BASE_USER>:<BASE_PASSWORD>@localhost:4601/<DB_NAME>`
+
+---
+
+### MySQL
+
+```sh
+docker compose up -d mysql
+```
+
+```sh
+mysql -h 127.0.0.1 -P 4606 -u <BASE_USER> -p<BASE_PASSWORD> <DB_NAME>
+```
+
+Connection string: `mysql://<BASE_USER>:<BASE_PASSWORD>@localhost:4606/<DB_NAME>`
+
+---
+
+### TiDB
+
+```sh
+docker compose up -d tidb
+```
+
+TiDB is MySQL-compatible. Connect using any MySQL client:
+
+```sh
+mysql -h 127.0.0.1 -P 4607 -u root
+```
+
+---
+
+### MongoDB
+
+```sh
+# With authentication
+docker compose up -d mongo
+
+# Without authentication (for quick prototyping)
+docker compose up -d mongo_noauth
+```
+
+```sh
+# Auth instance
+mongosh "mongodb://<BASE_USER>:<BASE_PASSWORD>@localhost:4604"
+
+# No-auth instance
+mongosh "mongodb://localhost:4605"
+```
+
+---
+
+### Redis
+
+```sh
+docker compose up -d redis
+```
+
+```sh
+redis-cli -h localhost -p 4603
+```
+
+Connection string: `redis://localhost:4603`
+
+---
+
+### MinIO (S3-compatible storage)
+
+```sh
+docker compose up -d minio-s3
+```
+
+Use the AWS SDK with these settings:
+
+| Setting | Value |
+|---------|-------|
+| Endpoint | `http://localhost:4610` |
+| Access Key | `<BASE_USER>` |
+| Secret Key | `<BASE_PASSWORD>` |
+| Region | `us-east-1` |
+| Force Path Style | `true` |
+
+```js
+// Node.js example
+const s3 = new S3Client({
+  endpoint: "http://localhost:4610",
+  credentials: { accessKeyId: "<BASE_USER>", secretAccessKey: "<BASE_PASSWORD>" },
+  region: "us-east-1",
+  forcePathStyle: true,
+});
+```
+
+Console UI: `http://localhost:4611`
+
+---
+
+### RabbitMQ
+
+```sh
+docker compose up -d rabbitmq
+```
+
+| Setting | Value |
+|---------|-------|
+| Host | `localhost` |
+| Port | `4617` |
+| Username | `<BASE_USER>` |
+| Password | `<BASE_PASSWORD>` |
+
+```python
+# Python (pika)
+import pika
+credentials = pika.PlainCredentials("<BASE_USER>", "<BASE_PASSWORD>")
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters("localhost", 4617, "/", credentials)
+)
+channel = connection.channel()
+channel.queue_declare(queue="tasks")
+channel.basic_publish(exchange="", routing_key="tasks", body="hello")
+```
+
+Management UI: `http://localhost:4618`
+
+---
+
+### Mailpit (Email testing)
+
+```sh
+docker compose up -d mailpit
+```
+
+Point your app's SMTP to Mailpit. No auth needed:
+
+| Setting | Value |
+|---------|-------|
+| SMTP Host | `localhost` |
+| SMTP Port | `4619` |
+| TLS | disabled |
+
+```js
+// Node.js (nodemailer)
+const transporter = nodemailer.createTransport({
+  host: "localhost",
+  port: 4619,
+  secure: false,
+});
+
+await transporter.sendMail({
+  from: "noreply@myapp.local",
+  to: "user@example.com",
+  subject: "Welcome",
+  html: "<h1>Hello!</h1>",
+});
+```
+
+View captured emails: `http://localhost:4620`
+
+---
+
+### Meilisearch
+
+```sh
+docker compose up -d meilisearch
+```
+
+```sh
+# Add documents
+curl -X POST 'http://localhost:4621/indexes/products/documents' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <BASE_PASSWORD>' \
+  --data-binary '[
+    { "id": 1, "name": "Laptop", "category": "electronics" },
+    { "id": 2, "name": "Phone", "category": "electronics" }
+  ]'
+
+# Search
+curl 'http://localhost:4621/indexes/products/search' \
+  -H 'Authorization: Bearer <BASE_PASSWORD>' \
+  -d '{ "q": "laptop" }'
+```
+
+```js
+// Node.js (meilisearch)
+import { MeiliSearch } from "meilisearch";
+const client = new MeiliSearch({ host: "http://localhost:4621", apiKey: "<BASE_PASSWORD>" });
+await client.index("products").addDocuments([{ id: 1, name: "Laptop" }]);
+const results = await client.index("products").search("laptop");
+```
+
+---
+
+### Redpanda (Kafka-compatible)
+
+```sh
+docker compose up -d redpanda redpanda-console
+```
+
+Use any Kafka client with bootstrap server `localhost:4622`:
+
+```sh
+# Using rpk (Redpanda CLI, included in the container)
+docker exec -it redpanda rpk topic create events
+docker exec -it redpanda rpk topic produce events
+docker exec -it redpanda rpk topic consume events
+```
+
+```js
+// Node.js (kafkajs)
+const { Kafka } = require("kafkajs");
+const kafka = new Kafka({ brokers: ["localhost:4622"] });
+
+const producer = kafka.producer();
+await producer.connect();
+await producer.send({
+  topic: "events",
+  messages: [{ key: "tenant1", value: JSON.stringify({ type: "signup" }) }],
+});
+```
+
+Console UI: `http://localhost:4626`
+
+---
+
+### Adminer (Database UI)
+
+```sh
+docker compose up -d adminer
+```
+
+Open `http://localhost:4609` and connect to any SQL database:
+
+| Database | Server | Port |
+|----------|--------|------|
+| PostgreSQL | `postgres` | 5432 |
+| MySQL | `mysql` | 3306 |
+| TiDB | `tidb` | 4000 |
+
+Use the **container names** as hostnames (not `localhost`) since Adminer connects from within Docker.
+
+---
+
+### Portainer (Container management)
+
+```sh
+docker compose up -d portainer
+```
+
+Open `http://localhost:4602` — create an admin account on first visit. Provides a GUI to manage containers, volumes, networks, and logs.
+
+---
+
 ## Tenant Subdomain Routing
 
 CoreDNS + Nginx are configured for local multi-tenant subdomain routing.
