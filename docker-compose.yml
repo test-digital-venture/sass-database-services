@@ -44,24 +44,32 @@ services:
       - shared_network
     ports:
       - 4604:27017
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${BASE_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${BASE_PASSWORD}
+    command: mongod --noauth
     volumes:
       - ${DATA_DIR}/mongo:/data/db
-  mongo_noauth:
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  mongo-auth:
     image: mongo
-    container_name: mongo_noauth
+    container_name: mongo-auth
     restart: "no"
     networks:
       - shared_network
     ports:
       - 4605:27017
     environment:
-      MONGO_INITDB_DATABASE: init  # Optional: initialize a specific database
-    command: mongod --noauth  # Disable authentication
+      MONGO_INITDB_ROOT_USERNAME: ${BASE_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${BASE_PASSWORD}
     volumes:
-      - ${DATA_DIR}/mongo_noauth:/data/db  # Changed volume path to avoid conflicts
+      - ${DATA_DIR}/mongo_auth:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   # mysql
   mysql:
     image: mysql:8.0
@@ -165,10 +173,11 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${BASE_USER}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${BASE_PASSWORD}
-      ME_CONFIG_MONGODB_URL: mongodb://${BASE_USER}:${BASE_PASSWORD}@mongo:27017/
+      ME_CONFIG_MONGODB_URL: mongodb://${BASE_USER}:${BASE_PASSWORD}@mongo-auth:27017/?authSource=admin
       ME_CONFIG_BASICAUTH: "false"
     depends_on:
-      - mongo
+      mongo-auth:
+        condition: service_healthy
   redisinsight:
     image: redis/redisinsight
     container_name: redisinsight
@@ -264,14 +273,16 @@ services:
       - 4627:53/udp
       - 4627:53/tcp
     volumes:
-      - ./coredns/Corefile:/root/Corefile
-    command: -conf /root/Corefile
+      - ./coredns/Corefile:/etc/coredns/Corefile:ro
+    command: -conf /etc/coredns/Corefile
   nginx:
     image: nginx:latest
     container_name: nginx
     restart: "no"
     networks:
       - shared_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - 4612:80
       - 4613:443
