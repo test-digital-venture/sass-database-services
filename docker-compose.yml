@@ -1,13 +1,13 @@
 services:
   postgres:
-    restart: always
+    restart: "no"
     container_name: postgres
     image: postgres:16
     networks:
       - shared_network
     # env_file: ./.env
     ports:
-      - 5434:5432
+      - 4601:5432
     environment:
       POSTGRES_USER: ${BASE_USER}
       POSTGRES_DB: ${DB_NAME}
@@ -17,33 +17,33 @@ services:
   portainer:
     image: portainer/portainer-ce
     container_name: portainer
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 9000:9000
+      - 4602:9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
   redis:
     image: redis:6.2
     container_name: redis
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 6389:6379  # Use 6379 inside container
-    command: ["redis-server", "--requirepass", "${BASE_PASSWORD}"]
+      - 4603:6379
+    # command: ["redis-server", "--requirepass", "${BASE_PASSWORD}"]
     volumes:
       - ${DATA_DIR}/redis:/data
   mongo:
     image: mongo
     container_name: mongo
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 27018:27017 # Using host port 27018 instead of 27017
+      - 4604:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${BASE_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${BASE_PASSWORD}
@@ -52,11 +52,11 @@ services:
   mongo_noauth:
     image: mongo
     container_name: mongo_noauth
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 27017:27017  
+      - 4605:27017
     environment:
       MONGO_INITDB_DATABASE: init  # Optional: initialize a specific database
     command: mongod --noauth  # Disable authentication
@@ -66,11 +66,11 @@ services:
   mysql:
     image: mysql:8.0
     container_name: mysql
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 3308:3306
+      - 4606:3306
     environment:
       MYSQL_ROOT_PASSWORD: ${BASE_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -88,7 +88,7 @@ services:
   # elasticsearch:
   #   image: elasticsearch:8.0.0
   #   container_name: elasticsearch
-  #   restart: always
+  #   restart: "no"
   #   networks:
   #     - shared_network
   #   ports:
@@ -109,65 +109,160 @@ services:
   tidb:
     image: pingcap/tidb
     container_name: tidb
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 4000:4000
-      - 10080:10080
+      - 4607:4000
+      - 4608:10080
     # environment:
     #   - MYSQL_ROOT_PASSWORD=${BASE_PASSWORD}
     #   - MYSQL_USER=${BASE_USER}
   adminer:
     image: adminer
     container_name: adminer
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 8200:8080
-  # minio-s3:
-  #   image: quay.io/minio/minio
-  #   container_name: minio-s3
-  #   restart: always
-  #   networks:
-  #     - shared_network
-  #   ports:
-  #     - 9090:9000  # API port: host:container
-  #     - 9091:9001  # Console port: host:container
-  #   environment:
-  #     MINIO_ROOT_USER: ${BASE_USER}
-  #     MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
-  #   command: server /data --console-address ":9001"
-  #   volumes:
-  #     - ${DATA_DIR}/minio:/data
-    
-# Removed separate minio-console since it's now integrated with minio-s3 on port 9001
-  # minio-client:
-  #   image: quay.io/minio/mc
-  #   container_name: minio-client
-  #   restart: always
-  #   networks:
-  #     - shared_network
-  #   entrypoint: >
-  #     sh -c "mc alias set myminio http://minio-s3:9000 ${BASE_USER} ${BASE_PASSWORD} &&
-  #            mc mb myminio/mybucket &&
-  #            mc policy set public myminio/mybucket &&
-  #            tail -f /dev/null"
-  #   depends_on:
-  #     - minio-s3
-  #   environment:
-  #     MINIO_ROOT_USER: ${BASE_USER}
-  #     MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
+      - 4609:8080
+  minio-s3:
+    image: quay.io/minio/minio
+    container_name: minio-s3
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4610:9000  # API port
+      - 4611:9001  # Console port
+    environment:
+      MINIO_ROOT_USER: ${BASE_USER}
+      MINIO_ROOT_PASSWORD: ${BASE_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - ${DATA_DIR}/minio:/data
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4614:80
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${BASE_USER}@admin.local
+      PGADMIN_DEFAULT_PASSWORD: ${BASE_PASSWORD}
+    volumes:
+      - ${DATA_DIR}/pgadmin:/var/lib/pgadmin
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4615:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${BASE_USER}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${BASE_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${BASE_USER}:${BASE_PASSWORD}@mongo:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongo
+  redisinsight:
+    image: redis/redisinsight
+    container_name: redisinsight
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4616:5540
+    volumes:
+      - ${DATA_DIR}/redisinsight:/data
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4617:5672   # AMQP
+      - 4618:15672  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${BASE_USER}
+      RABBITMQ_DEFAULT_PASS: ${BASE_PASSWORD}
+    volumes:
+      - ${DATA_DIR}/rabbitmq:/var/lib/rabbitmq
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4619:1025  # SMTP
+      - 4620:8025  # Web UI
+    volumes:
+      - ${DATA_DIR}/mailpit:/data
+  meilisearch:
+    image: getmeili/meilisearch
+    container_name: meilisearch
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4621:7700
+    environment:
+      MEILI_MASTER_KEY: ${BASE_PASSWORD}
+      MEILI_ENV: development
+    volumes:
+      - ${DATA_DIR}/meilisearch:/meili_data
+  redpanda:
+    image: redpandadata/redpanda
+    container_name: redpanda
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4622:9092   # Kafka API
+      - 4623:8081   # Schema Registry
+      - 4624:8082   # HTTP Proxy
+      - 4625:9644   # Admin API
+    command:
+      - redpanda
+      - start
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+      - --kafka-addr internal://0.0.0.0:29092,external://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:29092,external://localhost:4622
+      - --schema-registry-addr 0.0.0.0:8081
+      - --pandaproxy-addr 0.0.0.0:8082
+    volumes:
+      - ${DATA_DIR}/redpanda:/var/lib/redpanda/data
+  redpanda-console:
+    image: redpandadata/console
+    container_name: redpanda-console
+    restart: "no"
+    networks:
+      - shared_network
+    ports:
+      - 4626:8080
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+      SCHEMAREGISTRY_ENABLED: "true"
+      SCHEMAREGISTRY_URLS: http://redpanda:8081
+    depends_on:
+      - redpanda
   nginx:
     image: nginx:latest
     container_name: nginx
-    restart: always
+    restart: "no"
     networks:
       - shared_network
     ports:
-      - 80:80
-      - 443:443
+      - 4612:80
+      - 4613:443
 
 volumes:
   portainer_data:
