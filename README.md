@@ -61,6 +61,7 @@ Services are configured with `restart: "no"`, so they only run when explicitly s
 | Redpanda Admin | 4625 | Redpanda admin API |
 | Redpanda Console | 4626 | Redpanda web UI |
 | CoreDNS | 4627 | Local DNS for wildcard subdomains |
+| ICD-11 API | 4628 | WHO ICD-11 classification API |
 | Nginx HTTP | 4612 | Nginx reverse proxy (subdomain routing) |
 | Nginx HTTPS | 4613 | Nginx HTTPS |
 
@@ -339,6 +340,32 @@ docker compose up -d portainer
 ```
 
 Open `http://localhost:4602` — create an admin account on first visit. Provides a GUI to manage containers, volumes, networks, and logs.
+
+---
+
+### ICD-11 API (WHO Disease Classification)
+
+```sh
+docker compose up -d icd-api
+```
+
+The local container serves the full ICD-11 API without authentication:
+
+| Endpoint | URL |
+|----------|-----|
+| API (MMS) | `http://localhost:4628/icd/release/11/2024-01/mms` |
+| Browser | `http://localhost:4628/browse` |
+| Swagger | `http://localhost:4628/swagger/index.html` |
+
+```sh
+# Fetch all top-level chapters
+curl -H "Accept: application/json" \
+  http://localhost:4628/icd/release/11/2024-01/mms
+
+# Fetch a specific entity
+curl -H "Accept: application/json" \
+  http://localhost:4628/icd/release/11/2024-01/mms/1435254666
+```
 
 ---
 
